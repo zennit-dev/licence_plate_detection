@@ -1,0 +1,20 @@
+services:
+  ml-tensorflow:
+    container_name: ml-tensorflow-${BUILD_ENV:-dev}
+    image: ml-tensorflow:${BUILD_ENV:-dev}
+    build:
+      context: ..
+      target: ${BUILD_ENV:-dev}
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/app
+    ports:
+      - "8888:8888" # For Jupyter notebooks
+      - "6006:6006" # For TensorBoard
+    networks:
+      - ml-network
+
+
+networks:
+  ml-network:
+    driver: bridge

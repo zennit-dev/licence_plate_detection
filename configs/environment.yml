@@ -1,0 +1,32 @@
+# Environment Configuration
+# =======================
+
+
+#------------------------------------------------------------------------------
+# Data Management
+#------------------------------------------------------------------------------
+# Settings for data storage, caching, and preprocessing. These control
+# where data is stored and how it's processed before being used for
+# training or inference.
+
+paths:
+  base_dir: "."  # Base directory for data storage
+  data_dir: "data" # Directory for data storage
+  model_dir: "models" # Directory for model storage
+  log_dir: "logs" # Directory for log storage
+  cache_dir: ".cache" # Directory for cache storage
+  temp_dir: "/tmp/ml-tensorflow" # Temporary directory
+
+#------------------------------------------------------------------------------
+# Logging and Monitoring
+#------------------------------------------------------------------------------
+# Configuration for logging, monitoring, and alerting systems. These
+# settings control how the application tracks and reports its operation
+# and performance.
+monitoring:
+  logger_name: "ml-tensorflow" # Name of the logger
+  log_level: "info" # debug, info, success, warning, error, critical
+  enable_file_logging: true # Save logs to a file
+  log_dir: "logs" # Directory to save logs
+  enable_mlflow: true # Enable MLflow for experiment tracking
+  enable_wandb: false # Enable Weights & Biases for experiment tracking

@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: lint-check
+        name: Run lint check
+        entry: poetry run lint
+        language: system
+        pass_filenames: false
+        stages: [ pre-commit ]

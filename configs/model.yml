@@ -1,0 +1,28 @@
+# Model Configuration
+# ===================
+
+#------------------------------------------------------------------------------
+# Model Storage
+#------------------------------------------------------------------------------
+# Configuration for model storage locations, versioning, and formats.
+# These settings determine where and how models are saved during training
+# and where they are loaded from during inference.
+
+storage:
+  format: "saved_model" # Model format (saved_model, h5, onnx, pb, tflite)
+  version: "v1" # Model version
+
+#------------------------------------------------------------------------------
+# Model Prediction
+#------------------------------------------------------------------------------
+# Configuration for model prediction and inference. These settings control
+# how models are loaded and used to make predictions on new data.
+
+prediction:
+  batch_processing: true  # Enable/disable batch processing
+  cache_predictions: false  # Enable/disable prediction caching
+  timeout_ms: 5000  # Prediction timeout in milliseconds
+  return_probabilities: true  # Return probability scores with predictions
+  enable_preprocessing: true  # Enable input preprocessing
+  enable_postprocessing: true  # Enable output postprocessing
+  log_predictions: false  # Log predictions for monitoring
