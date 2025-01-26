@@ -4,25 +4,47 @@
 #------------------------------------------------------------------------------
 # Model Storage
 #------------------------------------------------------------------------------
-# Configuration for model storage locations, versioning, and formats.
-# These settings determine where and how models are saved during training
-# and where they are loaded from during inference.
-
 storage:
-  format: "saved_model" # Model format (saved_model, h5, onnx, pb, tflite)
-  version: "v1" # Model version
+  storage_dir: "models"
+  format: "saved_model"
+  version: "v1"
 
 #------------------------------------------------------------------------------
-# Model Prediction
+# Model Architecture
 #------------------------------------------------------------------------------
-# Configuration for model prediction and inference. These settings control
-# how models are loaded and used to make predictions on new data.
+architecture:
+  optimizer: "adam"
+  loss: "sparse_categorical_crossentropy"
+  metrics: [ "accuracy" ]
 
-prediction:
-  batch_processing: true  # Enable/disable batch processing
-  cache_predictions: false  # Enable/disable prediction caching
-  timeout_ms: 5000  # Prediction timeout in milliseconds
-  return_probabilities: true  # Return probability scores with predictions
-  enable_preprocessing: true  # Enable input preprocessing
-  enable_postprocessing: true  # Enable output postprocessing
-  log_predictions: false  # Log predictions for monitoring
+
+#------------------------------------------------------------------------------
+# Model Hyperparameters
+#------------------------------------------------------------------------------
+hyperparameters:
+  hidden_layers: [ 128, 64, 32 ]
+  activation: "relu"
+  dropout_rate: 0.2
+  input_shape: [ 224, 224, 3 ]
+
+#------------------------------------------------------------------------------
+# Model Layers
+#------------------------------------------------------------------------------
+layers:
+  conv_blocks:
+    first_block:
+      filters: [ 64, 64 ]
+      kernel_size: [ 3, 3 ]
+      pool_size: [ 2, 2 ]
+    second_block:
+      filters: [ 128, 128 ]
+      kernel_size: [ 3, 3 ]
+      pool_size: [ 2, 2 ]
+    third_block:
+      filters: [ 256, 256 ]
+      kernel_size: [ 3, 3 ]
+      pool_size: [ 2, 2 ]
+  dense_layers:
+    first_layer:
+      units: 512
+      dropout_rate: 0.3

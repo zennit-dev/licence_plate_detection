@@ -1,30 +1,56 @@
 from pydantic import BaseModel
 
-from .environment import MonitoringConfig, PathConfig
-from .model import PredictionConfig, StorageConfig
-from .training import MetricsConfig, ModelConfig, TrainingConfig
+from .environment import LoggingConfig, PathConfig
+from .model import ArchitectureConfig, HyperparametersConfig, LayerConfig, StorageConfig
+from .optimizers import AdamConfig, RMSPropConfig, SDGConfig
+from .training import (
+    DataAugmentationConfig,
+    DataConfig,
+    EarlyStoppingConfig,
+    MetricsConfig,
+    PredictionConfig,
+    TrainingConfig,
+)
 
 
 class EnvironmentConfig(BaseModel):
     """Combined environment configuration."""
 
     path: PathConfig = PathConfig()
-    monitoring: MonitoringConfig = MonitoringConfig()
+    logging: LoggingConfig = LoggingConfig()
 
 
 class ModelSettingsConfig(BaseModel):
     """Combined model settings configuration."""
 
-    prediction: PredictionConfig = PredictionConfig()
     storage: StorageConfig = StorageConfig()
+    architecture: ArchitectureConfig = ArchitectureConfig()
+    hyperparameters: HyperparametersConfig = HyperparametersConfig()
+    layer: LayerConfig = LayerConfig()
 
 
 class TrainingSettingsConfig(BaseModel):
     """Combined training settings configuration."""
 
-    model: ModelConfig = ModelConfig()
     training: TrainingConfig = TrainingConfig()
     metrics: MetricsConfig = MetricsConfig()
+    early_stopping: EarlyStoppingConfig = EarlyStoppingConfig()
+    data_augmentation: DataAugmentationConfig = DataAugmentationConfig()
+    data: DataConfig = DataConfig()
+    prediction: PredictionConfig = PredictionConfig()
 
 
-__all__ = ["EnvironmentConfig", "ModelSettingsConfig", "TrainingSettingsConfig"]
+class OptimizerSettingsConfig(BaseModel):
+    """Combined optimizer settings configuration."""
+
+    adam: AdamConfig = AdamConfig()
+    sgd: SDGConfig = SDGConfig()
+    rmsprop: RMSPropConfig = RMSPropConfig()
+
+
+__all__ = [
+    "EnvironmentConfig",
+    "ModelSettingsConfig",
+    "TrainingSettingsConfig",
+    "OptimizerSettingsConfig",
+]

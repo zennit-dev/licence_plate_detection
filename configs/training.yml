@@ -1,45 +1,61 @@
 # Training Configuration
 # ===================
 
-#------------------------------------------------------------------------------
-# Model Architecture
-#------------------------------------------------------------------------------
-# These settings define the core neural network architecture including
-# layer sizes, activation functions, and other structural parameters.
-
-model:
-  hidden_layers: [ 128, 64 ] # Number of neurons in each hidden layer
-  activation: "relu" # Activation function for hidden layers
-  optimizer: "adam" # Optimizer for training
-  dropout_rate: 0.2 # Dropout rate for regularization
-  input_shape: [ 28, 28, 1 ] # Shape of input data
-  output_classes: 10 # Number of output classes
 
 #------------------------------------------------------------------------------
 # Training Parameters
 #------------------------------------------------------------------------------
-# Core parameters that control the training process including batch size,
-# number of epochs, learning rate, and data splitting ratios.
-
-
 training:
-  batch_size: 32 # Number of samples per batch
-  epochs: 10 # Number of training epochs
-  learning_rate: 0.001 # Initial learning rate
-  validation_split: 0.2 # Fraction of training data for validation
-  early_stopping_patience: 5  # Number of epochs with no improvement
+  batch_size: 32
+  epochs: 100
+  learning_rate: 0.001
+  validation_split: 0.2
+  early_stopping_patience: 5
+  verbose: 1
 
 #------------------------------------------------------------------------------
 # Training Metrics
 #------------------------------------------------------------------------------
-# Metrics used to evaluate the model during training and validation.
-# These metrics are used to monitor model performance and make decisions
-# about training progress.
-
-
 metrics:
-  min_accuracy: 0.90 # classification accuracy
-  min_precision: 0.85 # classification precision
-  min_recall: 0.85 # classification recall
-  min_f1_score: 0.85 # classification F1 score
+  min_accuracy: 0.90
+  min_precision: 0.85
+  min_recall: 0.85
+  min_f1_score: 0.85
+
+#------------------------------------------------------------------------------
+# Early Stopping
+#------------------------------------------------------------------------------
+early_stopping:
+  enabled: false
+  monitor: "val_loss"
+  patience: 10
+  verbose: 1
+  restore_best_weights: false
+
+#------------------------------------------------------------------------------
+# Prediction Settings
+#------------------------------------------------------------------------------
+prediction:
+  batch_processing: true
+  timeout_ms: 5000
+  return_probabilities: true
+  enable_preprocessing: true
+  enable_postprocessing: true
+  log_predictions: false
+
+#------------------------------------------------------------------------------
+# Data Augmentation
+#------------------------------------------------------------------------------
+data_augmentation:
+  horizontal_flip: true
+  vertical_flip: true
+  rotation_range: 0.1
+
+#------------------------------------------------------------------------------
+# Training Data
+#------------------------------------------------------------------------------
+data:
+  data_dir: "data"
+  log_dir: "logs"
+  preprocessing_workers: 4
 

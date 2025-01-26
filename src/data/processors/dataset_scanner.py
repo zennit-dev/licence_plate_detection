@@ -1,6 +1,6 @@
-import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
+from xml.etree import ElementTree
 
 from src.settings import logger
 
@@ -13,23 +13,38 @@ class DatasetScanner:
         self.images_dir = data_dir / "images"
         self.annotations_dir = data_dir / "annotations"
 
-    def parse_annotation(self, xml_path: Path) -> str:
-        """Parse XML annotation file to get the class label.
+    @staticmethod
+    def parse_annotation(xml_path: Path) -> Tuple[str, Tuple[int, int, int, int]]:
+        """Parse XML annotation file to get the class label and bounding box coordinates.
 
         Args:
             xml_path: Path to XML annotation file
 
         Returns:
-            Class label from the annotation
+            Tuple of (class label, bounding box coordinates)
         """
         try:
-            tree = ET.parse(xml_path)
-            root = tree.getroot()
-            # Assuming the class label is stored in a specific tag - adjust as needed
-            # This is an example - modify according to your XML structure
+            root = ElementTree.parse(xml_path).getroot()
             class_elem = root.find(".//object/name")
             if class_elem is not None and class_elem.text:
-                return class_elem.text
+
+                def safe_int_conversion(
+                    element: Union[ElementTree.Element, Any, None], default: int = 0
+                ) -> int:
+                    return (
+                        int(element.text)
+                        if element is not None and element.text is not None
+                        else default
+                    )
+
+                bndbox = root.find(".//object/bndbox")
+                if bndbox is not None:
+                    xmin = safe_int_conversion(bndbox.find("xmin"))
+                    ymin = safe_int_conversion(bndbox.find("ymin"))
+                    xmax = safe_int_conversion(bndbox.find("xmax"))
+                    ymax = safe_int_conversion(bndbox.find("ymax"))
+                    return class_elem.text, (xmin, ymin, xmax, ymax)
+                raise ValueError(f"Bounding box not found in {xml_path}")
             raise ValueError(f"No class label found in {xml_path}")
         except Exception as e:
             raise ValueError(f"Failed to parse annotation {xml_path}: {str(e)}")
@@ -51,7 +66,7 @@ class DatasetScanner:
         logger.info("Scanning annotations to collect class labels...")
         for xml_path in self.annotations_dir.glob("*.xml"):
             try:
-                class_label = self.parse_annotation(xml_path)
+                class_label, _ = self.parse_annotation(xml_path)
                 class_labels.add(class_label)
             except ValueError as e:
                 logger.warning(str(e))
@@ -72,7 +87,7 @@ class DatasetScanner:
                     logger.warning(f"Image file not found for annotation: {image_name}")
                     continue
 
-                class_label = self.parse_annotation(xml_path)
+                class_label, _ = self.parse_annotation(xml_path)
                 class_idx = class_to_idx[class_label]
 
                 image_paths.append(image_path)

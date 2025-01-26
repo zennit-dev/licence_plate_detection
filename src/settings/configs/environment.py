@@ -2,21 +2,24 @@ from pydantic import BaseModel, Field
 
 
 class PathConfig(BaseModel):
-    """Base paths configuration."""
+    """System configuration settings."""
 
-    base_dir: str = Field(default=".")
-    data_dir: str = Field(default="data")
-    model_dir: str = Field(default="models")
-    log_dir: str = Field(default="logs")
-    cache_dir: str = Field(default=".cache")
-    temp_dir: str = Field(default="/tmp/ml-tensorflow")
+    base_dir: str = Field(
+        default=".", title="Base directory", description="Base directory for project"
+    )
+    temp_dir: str = Field(
+        default="tmp", title="Temporary directory", description="Temporary directory for data"
+    )
 
 
-class MonitoringConfig(BaseModel):
-    """Monitoring configuration."""
+class LoggingConfig(BaseModel):
+    """Logging configuration settings."""
 
-    logger_name: str = Field(default="ml-tensorflow")
-    log_level: str = Field(default="INFO")
-    enable_file_logging: bool = Field(default=True)
-    enable_mlflow: bool = Field(default=False)
-    enable_wandb: bool = Field(default=False)
+    logger_name: str = Field(default="app", title="Logger name", description="Logger name for data")
+    log_level: str = Field(default="INFO", title="Log level", description="Log level for data")
+    console_logging: bool = Field(
+        default=True, title="Console logging", description="Console logging for data"
+    )
+    file_logging: bool = Field(
+        default=True, title="File logging", description="File logging for data"
+    )

@@ -15,7 +15,7 @@ from tools.lint import run_lint
 
 def get_latest_saved_version() -> str:
     """Get the version of the latest saved model (only the base version part before timestamp)."""
-    model_dir = Path(config.environment.path.model_dir)
+    model_dir = Path(config.model.storage.storage_dir)
     if not model_dir.exists():
         return ""
 
@@ -58,17 +58,17 @@ def train(current_version: str, latest_saved_version: str) -> None:
     )
 
     # Prepare the dataset if needed
-    raw_data_dir = Path(config.environment.path.data_dir) / "raw"
-    processed_dir = Path(config.environment.path.data_dir) / "processed"
+    raw_data_dir = Path(config.training.data.data_dir) / "raw"
+    processed_dir = Path(config.training.data.data_dir) / "processed"
     train_dir = processed_dir / "train"
-    val_dir = processed_dir / "val"
+    validation_dir = processed_dir / "val"
     train_data = train_dir / "data.npz"
-    val_data = val_dir / "data.npz"
+    validation_data = validation_dir / "data.npz"
 
     # Check if data preparation can be skipped
     data_is_valid = (
         train_data.exists()
-        and val_data.exists()
+        and validation_data.exists()
         and (processed_dir / "class_mapping.json").exists()
     )
 
@@ -83,25 +83,25 @@ def train(current_version: str, latest_saved_version: str) -> None:
         data_prep.prepare(output_path=processed_dir, split_ratio=0.2)
 
         # Verify data was created
-        if not train_data.exists() or not val_data.exists():
+        if not train_data.exists() or not validation_data.exists():
             raise RuntimeError("Data preparation failed: Training or validation data not created")
 
     # Train the model
-    app.train(train_dir, val_dir)
+    app.train(train_dir, validation_dir)
 
 
 def main() -> None:
     """Main entry point that demonstrates data and prediction."""
-    parser = argparse.ArgumentParser(description="ML project command line interface")
+    parser = argparse.ArgumentParser(description="Project command line interface")
     parser.add_argument(
         "--force",
         action="store_true",
         help="Force data even if versions match",
     )
     parser.add_argument(
-        "--image",
+        "--data",
         type=str,
-        help="Path to the image file to predict",
+        help="Path to the data file to predict",
         required=True,
     )
     args = parser.parse_args()
@@ -111,11 +111,11 @@ def main() -> None:
 
     try:
         # Validate image path
-        input_data = Path(args.image)
+        input_data = Path(args.data)
         if not input_data.exists():
-            raise FileNotFoundError(f"Image file not found: {args.image}")
+            raise FileNotFoundError(f"Image file not found: {args.data}")
         if not input_data.is_file():
-            raise ValueError(f"Image path is not a file: {args.image}")
+            raise ValueError(f"Image path is not a file: {args.data}")
 
         current_version = config.model.storage.version
         latest_saved_version = get_latest_saved_version()

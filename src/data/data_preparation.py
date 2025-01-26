@@ -59,8 +59,8 @@ class DataPreparation:
         train_dir.mkdir(exist_ok=True)
         val_dir.mkdir(exist_ok=True)
 
-        train_temp = train_dir / "temp"
-        val_temp = val_dir / "temp"
+        train_temp = train_dir / "tmp"
+        val_temp = val_dir / "tmp"
 
         # Clean up any existing temp directories
         for temp_dir in [train_temp, val_temp]:

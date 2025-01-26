@@ -1,7 +1,7 @@
 services:
-  ml-tensorflow:
-    container_name: ml-tensorflow-${BUILD_ENV:-dev}
-    image: ml-tensorflow:${BUILD_ENV:-dev}
+  licence-plate-detection:
+    container_name: licence-plate-detection-${BUILD_ENV:-dev}
+    image: licence-plate-detection:${BUILD_ENV:-dev}
     build:
       context: ..
       target: ${BUILD_ENV:-dev}
@@ -12,9 +12,9 @@ services:
       - "8888:8888" # For Jupyter notebooks
       - "6006:6006" # For TensorBoard
     networks:
-      - ml-network
+      - licence-plate-detection-network
 
 
 networks:
-  ml-network:
+  licence-plate-detection-network:
     driver: bridge

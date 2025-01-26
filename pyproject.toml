@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "ml-course"
+name = "licence-plate-detection"
 version = "0.1.0"
-description = "A structured learning path for Machine Learning"
+description = "A machine learning model to detect licence plates in images"
 authors = ["Arbi Kullakshi <arbikullakshi0@gmail.com>"]
 license = "MIT"
 package-mode = true
@@ -13,35 +13,35 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
+tensorflow = "^2.18.0"
 pandas = "^2.2.3"
-scikit-learn = "^1.6.0"
+scikit-learn = "^1.6.1"
 matplotlib = "^3.10.0"
-scipy = "^1.14.1"
-tensorflow = "^2.15.0"
+scipy = "^1.15.1"
 tensorflow-addons = "^0.23.0"
 tensorflow-hub = "^0.16.1"
 tensorflow-datasets = "^4.9.7"
 tensorboard = "^2.18.0"
 typing-extensions = "^4.12.2"
 python-dotenv = "^1.0.1"
-pydantic = "^2.10.4"
+pydantic = "^2.10.5"
 seaborn = "^0.13.2"
 tensorflowjs = "^4.22.0"
 notebook = "^7.3.2"
 tensor-annotations-tensorflow-stubs = "^2.0.3"
 pyyaml = "^6.0.2"
 keras = "^3.8.0"
+types-tensorflow = "^2.18.0.20241227"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"
 flake8 = "^7.1.1"
 isort = "^5.13.2"
 mypy = "^1.14.1"
-pre-commit = "^4.0.1"
-pytest = "^8.3.4"
+pre-commit = "^4.1.0"
 jupyter-black = "^0.4.0"
 types-pyyaml = "^6.0.12.20241230"
-pydantic = { extras = ["mypy"], version = "^2.10.4" }
+pydantic = {extras = ["extra-mypy"], version = "^2.10.5"}
 types-tqdm = "^4.67.0.20241221"
 
 [build-system]

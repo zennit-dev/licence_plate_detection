@@ -1,48 +1,27 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Tuple
 
-import keras
 import numpy as np
 import numpy.typing as npt
-from keras import Input
-from keras.src.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
+from keras.src.callbacks import EarlyStopping
 
+from src.model.static import model as model_setup
 from src.settings import config, logger
-from src.utils.preprocessor_factory import PreprocessorFactory
+from src.utils import PreprocessorFactory, SaveModel
 
 
 class TrainModel:
     """Class to handle data of a Keras model."""
 
-    def __init__(
-        self,
-        input_shape: Tuple[int, ...],
-        num_classes: int,
-        preprocessor_type: Optional[str] = None,
-        model_config: Optional[Dict[str, Any]] = None,
-        data_config: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    def __init__(self, preprocessor_type: str, num_classes: int) -> None:
         """
         Initialize the data configuration.
 
         Args:
-            input_shape: Shape of input data (excluding batch dimension)
-            num_classes: Number of output classes
             preprocessor_type: Type of preprocessor to use ('image', 'text', or 'tabular')
-            model_config: Configuration for model architecture (layers, activations, etc.)
-            data_config: Configuration for data loading (normalization, preprocessing, etc.)
+            num_classes: Number of classes in the dataset
         """
-        self.input_shape = input_shape
         self.num_classes = num_classes
-        self.model_config = model_config or {}
-        self.data_config = data_config or {
-            "normalization_factor": 1.0,
-            "data_format": "npz",
-            "feature_key": "features",
-            "label_key": "labels",
-        }
-
-        # Initialize preprocessor if specified
         self.preprocessor = None
         if preprocessor_type:
             self.preprocessor = PreprocessorFactory.get_preprocessor(preprocessor_type)
@@ -65,54 +44,10 @@ class TrainModel:
 
         return features, labels
 
-    def __create_model(self) -> keras.Model:
-        """Create and compile the model based on configuration."""
-        model = keras.Sequential(
-            [
-                # Input and preprocessing
-                Input(shape=self.input_shape),
-                keras.layers.Rescaling(1.0 / 255),
-                # Data augmentation
-                keras.layers.RandomFlip("horizontal"),
-                keras.layers.RandomRotation(0.1),
-                # First convolutional block
-                Conv2D(64, (3, 3), activation="relu", padding="same"),
-                Conv2D(64, (3, 3), activation="relu"),
-                MaxPooling2D(pool_size=(2, 2)),
-                Dropout(0.2),
-                # Second convolutional block
-                Conv2D(128, (3, 3), activation="relu", padding="same"),
-                Conv2D(128, (3, 3), activation="relu"),
-                MaxPooling2D(pool_size=(2, 2)),
-                Dropout(0.2),
-                # Third convolutional block
-                Conv2D(256, (3, 3), activation="relu", padding="same"),
-                Conv2D(256, (3, 3), activation="relu"),
-                MaxPooling2D(pool_size=(2, 2)),
-                Dropout(0.2),
-                # Dense layers
-                Flatten(),
-                Dense(512, activation="relu"),
-                Dropout(0.3),
-                Dense(self.num_classes, activation="softmax"),
-            ]
-        )
-
-        # Compile model
-        model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss="sparse_categorical_crossentropy",
-            metrics=["accuracy"],
-        )
-        return model
-
     def train(
         self,
         train_data: Path,
         evaluate_data: Path,
-        save_path: Optional[Path] = None,
-        epochs: Optional[int] = None,
-        batch_size: Optional[int] = None,
     ) -> Path:
         """Train a model on the provided data, evaluate it, and save results."""
         try:
@@ -129,27 +64,42 @@ class TrainModel:
             logger.info(f"Number of classes: {len(np.unique(y_train))}")
 
             # Create and train model
-            model = self.__create_model()
+            model = model_setup.create_model(num_classes=self.num_classes)
             logger.info("Starting model training...")
 
-            model.fit(
+            early_stopping = EarlyStopping(
+                monitor=config.training.early_stopping.monitor,
+                patience=config.training.early_stopping.patience,
+                restore_best_weights=config.training.early_stopping.restore_best_weights,
+                verbose=config.training.early_stopping.verbose,
+            )
+
+            # Train the model with early stopping
+            history = model.fit(
                 x_train,
                 y_train,
                 validation_data=(x_val, y_val),
-                epochs=epochs or 50,
-                batch_size=batch_size or 32,
-                verbose=1,
+                epochs=config.training.training.epochs,
+                batch_size=config.training.training.batch_size,
+                callbacks=[early_stopping] if config.training.early_stopping.enabled else [],
+                verbose=config.training.training.verbose,
             )
+            metrics = {
+                "training": {
+                    "history": history.history,
+                    "parameters": {
+                        "epochs": config.training.training.epochs,
+                        "batch_size": config.training.training.batch_size,
+                        "train_samples": len(x_train),
+                        "val_samples": len(x_val),
+                    },
+                },
+            }
 
             # Save the model
             logger.info("Saving model...")
-            save_dir = Path(save_path) if save_path else Path(config.environment.path.model_dir)
-            save_dir.mkdir(parents=True, exist_ok=True)
-            model_path = save_dir / "model.keras"
-            model.save(model_path)
-
-            return model_path
+            return SaveModel().save(model=model, metrics=metrics)
 
         except Exception as e:
             logger.error(f"Training failed: {str(e)}")
-            raise RuntimeError(f"Training failed: {str(e)}")
+            raise

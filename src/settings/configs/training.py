@@ -1,25 +1,6 @@
 from pydantic import BaseModel, Field
 
 
-class ModelConfig(BaseModel):
-    """Training configuration settings."""
-
-    hidden_layers: list[int] = Field(
-        [64, 32], title="Hidden layers", description="Number of neurons in hidden layers"
-    )
-    activation: str = Field(
-        "relu", title="Activation function", description="Activation function for hidden layers"
-    )
-    optimizer: str = Field("adam", title="Optimizer", description="Optimizer for training")
-    dropout_rate: float = Field(
-        0.2, title="Dropout rate", description="Dropout rate for regularization"
-    )
-    input_shape: list[int] = Field(
-        [224, 224, 3], title="Input shape", description="Input shape for the model"
-    )
-    output_classes: int = Field(2, title="Output classes", description="Number of output classes")
-
-
 class TrainingConfig(BaseModel):
     """Training configuration settings."""
 
@@ -31,7 +12,10 @@ class TrainingConfig(BaseModel):
     validation_split: float = Field(
         0.2, title="Validation split", description="Validation split ratio"
     )
-    early_stopping: bool = Field(True, title="Early stopping", description="Enable early stopping")
+    early_stopping_patience: int = Field(
+        10, title="Early stopping patience", description="Early stopping patience"
+    )
+    verbose: int = Field(1, title="Verbose", description="Verbosity mode (0, 1, or 2)")
 
 
 class MetricsConfig(BaseModel):
@@ -44,4 +28,73 @@ class MetricsConfig(BaseModel):
         0.8, title="Minimum precision", description="Minimum precision threshold"
     )
     min_recall: float = Field(0.8, title="Minimum recall", description="Minimum recall threshold")
-    min_f1: float = Field(0.8, title="Minimum F1 score", description="Minimum F1 score threshold")
+    min_f1_score: float = Field(
+        0.8, title="Minimum F1 score", description="Minimum F1 score threshold"
+    )
+
+
+class EarlyStoppingConfig(BaseModel):
+    """Early stopping configuration settings."""
+
+    enabled: bool = Field(True, title="Enabled", description="Enable early stopping")
+    monitor: str = Field(
+        "val_loss", title="Monitor", description="Quantity to be monitored for early stopping"
+    )
+    patience: int = Field(
+        10, title="Patience", description="Number of epochs with no improvement after stopping"
+    )
+    verbose: int = Field(0, title="Verbose", description="Verbosity mode (0, 1, or 2)")
+    restore_best_weights: bool = Field(
+        True, title="Restore best weights", description="Restore best weights after stopping"
+    )
+
+
+class PredictionConfig(BaseModel):
+    """Prediction configuration settings."""
+
+    batch_processing: bool = Field(
+        False, title="Batch processing", description="Enable batch processing for predictions"
+    )
+    timeout_ms: int = Field(
+        5000, title="Timeout", description="Timeout in milliseconds for prediction requests"
+    )
+    return_probabilities: bool = Field(
+        False, title="Return probabilities", description="Return class probabilities"
+    )
+    enable_preprocessing: bool = Field(
+        False, title="Enable preprocessing", description="Enable data preprocessing"
+    )
+    enable_postprocessing: bool = Field(
+        False, title="Enable postprocessing", description="Enable data postprocessing"
+    )
+    log_predictions: bool = Field(
+        False, title="Log predictions", description="Log predictions to file"
+    )
+
+
+class DataAugmentationConfig(BaseModel):
+    """Data augmentation configuration settings."""
+
+    horizontal_flip: bool = Field(
+        True, title="Horizontal flip", description="Randomly flip images horizontally"
+    )
+    vertical_flip: bool = Field(
+        False, title="Vertical flip", description="Randomly flip images vertically"
+    )
+    rotation_range: float = Field(
+        0.0, title="Rotation range", description="Randomly rotate images within a range"
+    )
+
+
+class DataConfig(BaseModel):
+    """Data configuration settings."""
+
+    data_dir: str = Field(
+        default="data", title="Data directory", description="Data directory for training"
+    )
+    log_dir: str = Field(
+        default="logs", title="Log directory", description="Log directory for logging"
+    )
+    preprocessing_workers: int = Field(
+        default=4, title="Preprocessing workers", description="Number of workers for preprocessing"
+    )

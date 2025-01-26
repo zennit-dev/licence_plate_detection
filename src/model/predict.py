@@ -3,14 +3,14 @@
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 import keras
 import numpy as np
 import numpy.typing as npt
 import tensorflow as tf
 
-from src.settings import config, logger
+from src.settings import config
 from src.utils import PreprocessorFactory
 
 # Type aliases for cleaner type hints
@@ -21,25 +21,18 @@ PredictionResults = Dict[str, Dict[str, Union[int, float, str, list[float]]]]
 class PredictModel:
     """Handles model operations including data, saving, loading and prediction."""
 
-    def __init__(self, model_dir: Optional[Path] = None) -> None:
-        """Initialize model manager.
-
-        Args:
-            model_dir: Optional directory containing saved models. If None, uses config default.
-        """
-        self.model_dir = (
-            Path(config.environment.path.model_dir) if model_dir is None else Path(model_dir)
-        )
-        self.keras_model: Optional[tf.keras.Model] = None  # noqa
-        self.tf_model: Optional[tf.keras.Model] = None  # noqa
-        self._prediction_cache: Dict[str, PredictionResults] = {}
+    def __init__(self) -> None:
+        """Initialize model manager."""
+        self.keras_model: Optional[keras.Model] = None
         self._class_mapping: Optional[Dict[str, int]] = None
         self._idx_to_class: Optional[Dict[int, str]] = None
 
-    def _load_class_mapping(self) -> None:
+    def __load_class_mapping(self) -> None:
         """Load class mapping from the processed data directory."""
+        latest_dir = self.__load_latest_version()
+
         if self._class_mapping is None:
-            mapping_file = self.model_dir / "class_mapping.json"
+            mapping_file = latest_dir / "metadata.json"
             if not mapping_file.exists():
                 raise FileNotFoundError(f"Class mapping file not found: {mapping_file}")
 
@@ -49,14 +42,14 @@ class PredictModel:
                 self._idx_to_class = {v: k for k, v in self._class_mapping.items()}
                 self._idx_to_class = {v: k for k, v in self._class_mapping.items()}
 
-    def _evaluate(
+    def __evaluate(
         self,
         start_time: float,
         input_data: Union[NDArray, tf.Tensor],
         extra_kwargs: Dict[str, Any],
         results: PredictionResults,
     ) -> PredictionResults:
-        """Evaluate the input data using both models.
+        """Evaluate the input data using the Keras model.
 
         Args:
             start_time: Start time for timeout checking
@@ -69,9 +62,9 @@ class PredictModel:
 
         Raises:
             TimeoutError: If evaluation time exceeds timeout
-            ValueError: If models are not loaded
+            ValueError: If model is not loaded
         """
-        timeout = config.model.prediction.timeout_ms / 1000
+        timeout = config.training.prediction.timeout_ms / 1000
         if time.time() - start_time > timeout:
             raise TimeoutError("Prediction timeout exceeded")
 
@@ -80,7 +73,7 @@ class PredictModel:
 
         # Load class mapping if not already loaded
         if self._idx_to_class is None:
-            self._load_class_mapping()
+            self.__load_class_mapping()
 
         # After loading, we can assert the mapping exists
         assert self._idx_to_class is not None, "Class mapping not loaded"
@@ -103,41 +96,20 @@ class PredictModel:
                     model_input = tf.expand_dims(model_input, axis=0)
 
         # Keras prediction
-        keras_prediction = self.keras_model.predict(model_input)
-        keras_digit = int(tf.argmax(keras_prediction[0]).numpy())
-        results["keras"] = {
-            "class": self._idx_to_class[keras_digit],
-            "confidence": float(keras_prediction[0][keras_digit]),
+        prediction = self.keras_model.predict(model_input)
+        digit = int(tf.argmax(prediction[0]).numpy())
+        results["prediction"] = {
+            "class": self._idx_to_class[digit],
+            "confidence": float(prediction[0][digit]),
         }
 
-        if config.model.prediction.return_probabilities:
-            results["keras"]["probabilities"] = keras_prediction[0].tolist()
-
-        # TensorFlow prediction
-        if time.time() - start_time > timeout:
-            raise TimeoutError("Prediction timeout exceeded")
-
-        if self.tf_model is None:
-            raise ValueError("TensorFlow model not loaded")
-
-        infer = self.tf_model.signatures["serving_default"]
-        input_name = list(infer.structured_input_signature[1].keys())[0]
-        tf_prediction = infer(**{input_name: model_input})
-        tf_probs = tf_prediction["output_0"].numpy()[0]
-        tf_digit = int(tf.argmax(tf_probs).numpy())
-
-        results["tensorflow"] = {
-            "class": self._idx_to_class[tf_digit],
-            "confidence": float(tf_probs[tf_digit]),
-        }
-
-        if config.model.prediction.return_probabilities:
-            results["tensorflow"]["probabilities"] = tf_probs.tolist()
+        if config.training.prediction.return_probabilities:
+            results["prediction"]["probabilities"] = prediction[0].tolist()
 
         return results
 
     @staticmethod
-    def _post_processing(results: PredictionResults) -> PredictionResults:
+    def __post_processing(results: PredictionResults) -> PredictionResults:
         """Post-process prediction results.
 
         Args:
@@ -146,20 +118,10 @@ class PredictModel:
         Returns:
             Post-processed results
         """
-        if results["keras"]["class"] == results["tensorflow"]["class"]:
-            keras_conf = results["keras"].get("confidence", 0.0)
-            tf_conf = results["tensorflow"].get("confidence", 0.0)
-            if not isinstance(keras_conf, (int, float)) or not isinstance(tf_conf, (int, float)):
-                raise ValueError("Confidence values must be numeric")
-
-            results["ensemble"] = {
-                "class": results["keras"]["class"],
-                "confidence": (float(keras_conf) + float(tf_conf)) / 2,
-            }
-
+        # No ensemble needed since we only have one model
         return results
 
-    def _load_latest_model(self) -> Tuple[tf.keras.Model, tf.keras.Model]:  # noqa
+    def __load_latest_model(self) -> keras.Model:
         """Load the latest version of both models.
 
         Returns:
@@ -168,8 +130,12 @@ class PredictModel:
         Raises:
             FileNotFoundError: If no models are found
         """
-        model_dir = Path(config.environment.path.model_dir)
+        latest_dir = self.__load_latest_version()
+        return keras.models.load_model(latest_dir / "model.keras")
 
+    @staticmethod
+    def __load_latest_version() -> Path:
+        model_dir = Path(config.model.storage.storage_dir)
         version_dirs = [d for d in model_dir.iterdir() if d.is_dir()]
         if not version_dirs:
             raise FileNotFoundError(f"No model versions found in {model_dir}")
@@ -179,60 +145,27 @@ class PredictModel:
             version_dirs, key=lambda d: d.name.split("_")[1] if "_" in d.name else "", reverse=True
         )
 
-        # Then group by version and get the latest timestamp for each version
         version_groups: Dict[str, Path] = {}
         for dir_path in version_dirs:
             version = dir_path.name.split("_")[0] if "_" in dir_path.name else dir_path.name
             if version not in version_groups:
                 version_groups[version] = dir_path
 
-        # Try to find the current version first
         current_version = config.model.storage.version
         if current_version in version_groups:
-            latest_dir = version_groups[current_version]
+            return version_groups[current_version]
         else:
-            # If no matching version found, use the latest version available
             latest_version = sorted(version_groups.keys(), reverse=True)[0]
-            latest_dir = version_groups[latest_version]
-            logger.warning(
-                f"No models found for version {current_version}. "
-                f"Using latest available version: {latest_dir.name}"
-            )
-
-        keras_path = latest_dir / "model.keras"
-        keras_model = keras.models.load_model(keras_path)
-
-        tf_path = latest_dir / "tensorflow_model"
-        tf_model = tf.saved_model.load(str(tf_path))
-
-        return keras_model, tf_model
-
-    @staticmethod
-    def _cache_predictions(input_data: Union[NDArray, tf.Tensor]) -> str:
-        """Cache predictions to avoid redundant computation.
-
-        Args:
-            input_data: Input data used for prediction
-
-        Returns:
-            Cache key for the input data
-        """
-        if isinstance(input_data, tf.Tensor):
-            tensor_bytes = tf.io.serialize_tensor(input_data).numpy()
-            cache_key = str(hash(tensor_bytes.tobytes()))
-        else:
-            cache_key = str(hash(input_data.tobytes()))
-
-        return cache_key
+            return version_groups[latest_version]
 
     def predict(
         self,
         input_data: Union[str, Path, NDArray, tf.Tensor],
-        preprocessor_type: Optional[str] = None,
+        preprocessor_type: str,
         preprocess_kwargs: Optional[Dict[str, Any]] = None,
         extra_kwargs: Optional[Dict[str, Any]] = None,
     ) -> PredictionResults:
-        """Make predictions using both Keras and TensorFlow models.
+        """Make predictions using the Keras model.
 
         Args:
             input_data: Raw input data (file path, text, or preprocessed array)
@@ -241,53 +174,40 @@ class PredictModel:
             extra_kwargs: Additional arguments for model evaluation
 
         Returns:
-            Dictionary containing predictions from both models
+            Dictionary containing predictions from the Keras model
 
         Raises:
             TimeoutError: If prediction time exceeds timeout
-            ValueError: If models are not loaded or input is invalid
+            ValueError: If model is not loaded or input is invalid
         """
-        processed_input: Union[NDArray, tf.Tensor]
 
-        # Handle preprocessing if needed
-        if preprocessor_type and isinstance(input_data, (str, Path)):
+        preprocess_kwargs = preprocess_kwargs or {}
+        extra_kwargs = extra_kwargs or {}
+        processed_input: Union[str, Path, NDArray, tf.Tensor]
+
+        if isinstance(input_data, (str, Path)):
             preprocessor = PreprocessorFactory.get_preprocessor(preprocessor_type)
-            processed_input = preprocessor.preprocess(input_data, **(preprocess_kwargs or {}))
+            processed_input = preprocessor.preprocess(input_data, **preprocess_kwargs)
         elif isinstance(input_data, (np.ndarray, tf.Tensor)):
             processed_input = input_data
         else:
-            raise ValueError(
-                "Input must be either a file path with preprocessor_type specified, "
-                "or a preprocessed numpy array/tensor"
-            )
+            raise ValueError("Invalid input type")
 
-        # Generate cache key for preprocessed data
-        cache_key = (
-            self._cache_predictions(processed_input)
-            if config.model.prediction.cache_predictions
-            else None
-        )
-        if cache_key and cache_key in self._prediction_cache:
-            return self._prediction_cache[cache_key]
-
-        if self.keras_model is None or self.tf_model is None:
-            self.keras_model, self.tf_model = self._load_latest_model()
+        if self.keras_model is None:
+            self.keras_model = self.__load_latest_model()
 
         # Start timing for timeout check
         start_time = time.time()
 
         results: PredictionResults = {}
         try:
-            results = self._evaluate(start_time, processed_input, extra_kwargs or {}, results)
+            results = self.__evaluate(start_time, processed_input, extra_kwargs or {}, results)
         except TimeoutError as e:
             raise TimeoutError(
-                f"Prediction timeout exceeded: {config.model.prediction.timeout_ms}ms"
+                f"Prediction timeout exceeded: {config.training.prediction.timeout_ms}ms"
             ) from e
 
-        if config.model.prediction.enable_postprocessing:
-            results = self._post_processing(results)
-
-        if cache_key:
-            self._prediction_cache[cache_key] = results
+        if config.training.prediction.enable_postprocessing:
+            results = self.__post_processing(results)
 
         return results

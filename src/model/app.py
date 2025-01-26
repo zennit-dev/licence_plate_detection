@@ -12,35 +12,31 @@ from src.settings import config, logger
 class MLApp:
     """Main application class handling data and prediction workflows."""
 
-    def __init__(self, model_dir: Optional[Path] = None) -> None:
-        """Initialize the ML application.
-
-        Args:
-            model_dir: Optional directory for model storage. If None, uses config default.
-        """
-        self.model_manager = PredictModel(model_dir)
+    def __init__(self) -> None:
+        """Initialize the ML application."""
+        self.model_manager = PredictModel()
 
     @staticmethod
-    def train(train_data: Path, evaluate_data: Path) -> Path:
+    def train(train_data: Path, validation_data: Path) -> Path:
         """Run the training pipeline.
+
+        Args:
+            train_data: Path to the training data directory
+            validation_data: Path to the validation data directory
 
         Returns:
             Path to saved model directory
         """
         try:
             # Load class mapping to determine number of classes
-            processed_dir = Path(config.environment.path.data_dir) / "processed"
+            processed_dir = Path(config.training.data.data_dir) / "processed"
             with open(processed_dir / "class_mapping.json") as f:
                 class_mapping = json.load(f)
             num_classes = len(class_mapping)
 
             # Train and evaluate the model
-            trainer = TrainModel(
-                input_shape=(224, 224, 3),  # Image shape from data_preparation.py
-                num_classes=num_classes,
-                preprocessor_type="image",
-            )
-            save_path = trainer.train(train_data, evaluate_data)
+            trainer = TrainModel(preprocessor_type="image", num_classes=num_classes)
+            save_path = trainer.train(train_data, validation_data)
 
             logger.info("Training completed successfully")
             logger.info(f"Model saved to: {save_path}")
@@ -51,13 +47,13 @@ class MLApp:
             logger.error(f"Failed to import required modules: {str(e)}")
             raise
         except Exception as e:
-            logger.error(str(e))
+            logger.error(f"Training failed: {str(e)}")
             raise
 
     def predict(
         self,
         input_data: Union[str, Path],
-        preprocessor_type: Optional[str] = None,
+        preprocessor_type: str,
         preprocess_kwargs: Optional[Dict[str, Any]] = None,
         extra_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Dict[str, Union[int, float, str, list[float]]]]:

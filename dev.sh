@@ -38,7 +38,7 @@ show_help() {
 
 start_environment() {
     local should_build=$1
-    local container_name="ml-tensorflow-${BUILD_ENV}"
+    local container_name="licence-plate-detection-${BUILD_ENV}"
 
     if [ "$should_build" = true ]; then
         echo -e "${BLUE}Building Docker containers (${BUILD_ENV} environment)...${NC}"

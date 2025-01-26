@@ -1,6 +1,6 @@
 """Model module for the project."""
 
-from src.model.app import MLApp
+from .app import MLApp
 
 app = MLApp()
 

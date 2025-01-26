@@ -63,7 +63,7 @@ exporting them for various deployment targets.
    ```bash
    # Clone the repository
    git clone <repository-url>
-   cd ml-course
+   cd licence-plate-detection
 
    # Install dependencies
    poetry install

@@ -60,7 +60,7 @@ def setup_logging() -> bool:
     """
     try:
         # Create logs directory if it doesn't exist
-        log_dir = Path(config.environment.path.log_dir)
+        log_dir = Path(config.training.data.log_dir)
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Create formatters
@@ -72,10 +72,10 @@ def setup_logging() -> bool:
         )
 
         # Configure the app logger first
-        app_logger = logging.getLogger(config.environment.monitoring.logger_name)
+        app_logger = logging.getLogger(config.environment.logging.logger_name)
 
         # Set the base logging level based on config
-        log_level = getattr(logging, config.environment.monitoring.log_level.upper(), logging.INFO)
+        log_level = getattr(logging, config.environment.logging.log_level.upper(), logging.INFO)
         app_logger.setLevel(log_level)
 
         # Remove any existing handlers to avoid duplicates
@@ -88,7 +88,7 @@ def setup_logging() -> bool:
         app_logger.addHandler(console_handler)
 
         # Add file handler if enabled
-        if config.environment.monitoring.enable_file_logging:
+        if config.environment.logging.file_logging:
             file_handler = logging.FileHandler(log_dir / "app.log", mode="a")
             file_handler.setFormatter(file_formatter)
             file_handler.setLevel(log_level)
@@ -112,35 +112,35 @@ class Logging:
     @staticmethod
     def info(message: str) -> None:
         """Log an informational message."""
-        logger = logging.getLogger(config.environment.monitoring.logger_name)
+        logger = logging.getLogger(config.environment.logging.logger_name)
         logger.info(message)
 
     @staticmethod
     def success(message: str) -> None:
         """Log a success message."""
-        logger = logging.getLogger(config.environment.monitoring.logger_name)
+        logger = logging.getLogger(config.environment.logging.logger_name)
         logger.log(SUCCESS, message)
 
     @staticmethod
     def warning(message: str) -> None:
         """Log a warning message."""
-        logger = logging.getLogger(config.environment.monitoring.logger_name)
+        logger = logging.getLogger(config.environment.logging.logger_name)
         logger.warning(message)
 
     @staticmethod
     def error(message: str) -> None:
         """Log an error message."""
-        logger = logging.getLogger(config.environment.monitoring.logger_name)
+        logger = logging.getLogger(config.environment.logging.logger_name)
         logger.error(message)
 
     @staticmethod
     def debug(message: str) -> None:
         """Log a debug message."""
-        logger = logging.getLogger(config.environment.monitoring.logger_name)
+        logger = logging.getLogger(config.environment.logging.logger_name)
         logger.debug(message)
 
     @staticmethod
     def critical(message: str) -> None:
         """Log a critical message."""
-        logger = logging.getLogger(config.environment.monitoring.logger_name)
+        logger = logging.getLogger(config.environment.logging.logger_name)
         logger.critical(message)

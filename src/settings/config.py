@@ -7,7 +7,12 @@ from typing import Any, Dict, Optional
 
 import yaml
 
-from src.settings.configs import EnvironmentConfig, ModelSettingsConfig, TrainingSettingsConfig
+from .configs import (
+    EnvironmentConfig,
+    ModelSettingsConfig,
+    OptimizerSettingsConfig,
+    TrainingSettingsConfig,
+)
 
 
 def _load_all_configs() -> Dict[str, Any]:
@@ -38,18 +43,29 @@ class Config:
         # Initialize configurations with their respective sections
         self.environment = EnvironmentConfig(
             path=self._get_config_with_env("environment", "path"),
-            monitoring=self._get_config_with_env("environment", "monitoring"),
+            logging=self._get_config_with_env("environment", "logging"),
         )
 
         self.model = ModelSettingsConfig(
-            prediction=self._get_config_with_env("model", "prediction"),
             storage=self._get_config_with_env("model", "storage"),
+            architecture=self._get_config_with_env("model", "architecture"),
+            hyperparameters=self._get_config_with_env("model", "hyperparameters"),
+            layers=self._get_config_with_env("model", "layers"),
         )
 
         self.training = TrainingSettingsConfig(
-            model=self._get_config_with_env("training", "model"),
             training=self._get_config_with_env("training", "training"),
             metrics=self._get_config_with_env("training", "metrics"),
+            early_stopping=self._get_config_with_env("training", "early_stopping"),
+            prediction=self._get_config_with_env("training", "prediction"),
+            data_augmentation=self._get_config_with_env("training", "data_augmentation"),
+            data=self._get_config_with_env("training", "data"),
+        )
+
+        self.optimizer = OptimizerSettingsConfig(
+            adam=self._get_config_with_env("optimizers", "adam"),
+            sgd=self._get_config_with_env("optimizers", "sgd"),
+            rmsprop=self._get_config_with_env("optimizers", "rmsprop"),
         )
 
     def _get_config_with_env(self, config_file: str, section: str) -> dict[str, Any]:
